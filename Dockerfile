@@ -1,5 +1,5 @@
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║  WhispeRust — Multi-stage Dockerfile                                    ║
+# ║  Ruistper — Multi-stage Dockerfile                                      ║
 # ║                                                                         ║
 # ║  Stage 1 (builder) : Rust toolchain + C++ build tools                  ║
 # ║    · cmake + build-essential: compilan whisper.cpp (via whisper-rs-sys) ║
@@ -39,15 +39,15 @@ COPY Cargo.toml Cargo.lock* ./
 # Luego se borran sólo los artefactos del stub para que el código real
 # se compile desde cero en el siguiente paso (evitando binarios corruptos).
 RUN mkdir -p src && echo 'fn main() {}' > src/main.rs \
-    && cargo build --release --bin whisperust || true \
+    && cargo build --release --bin ruistper || true \
     && rm -f  src/main.rs \
-              target/release/whisperust \
-              target/release/deps/whisperust-* \
-    && rm -rf target/release/.fingerprint/whisperust-*
+              target/release/ruistper \
+              target/release/deps/ruistper-* \
+    && rm -rf target/release/.fingerprint/ruistper-*
 
 # ── Compilación real ──────────────────────────────────────────────────────────
 COPY src ./src
-RUN cargo build --release --bin whisperust
+RUN cargo build --release --bin ruistper
 
 # ── Stage 2: Runtime mínimo ───────────────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Único artefacto copiado desde el builder: el binario estático
-COPY --from=builder /build/target/release/whisperust /usr/local/bin/whisperust
+COPY --from=builder /build/target/release/ruistper /usr/local/bin/ruistper
 
 # Entrypoint: descarga el modelo GGML si no está presente, luego exec el binario
 COPY entrypoint.sh /entrypoint.sh
@@ -90,7 +90,7 @@ ENV WHISPER_MODEL=base.q5_0 \
     RABBITMQ_QUEUE_NAME=whisper_transcriptions \
     API_HOST=0.0.0.0 \
     API_PORT=8080 \
-    RUST_LOG=whisperust=info,warn
+    RUST_LOG=ruistper=info,warn
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["/usr/local/bin/whisperust"]
+CMD ["/usr/local/bin/ruistper"]

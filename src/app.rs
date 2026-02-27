@@ -124,7 +124,7 @@ pub async fn run() -> Result<(), AppError> {
 
     tracing::info!(
         workers = cfg.workers_count,
-        "✅ WhispeRust ready — waiting for transcription jobs"
+        "✅ Ruistper ready — waiting for transcription jobs"
     );
 
     // ── 11. Concurrent run + OS-signal wait ───────────────────────────────────

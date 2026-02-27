@@ -14,9 +14,9 @@ async fn main() {
     // ── Tracing / structured logging ──────────────────────────────────────────
     // Default level = INFO for this crate, WARN for everything else.
     // Override at runtime via the RUST_LOG environment variable:
-    //   RUST_LOG=whisperust=debug,lapin=warn cargo run
+    //   RUST_LOG=ruistper=debug,lapin=warn cargo run
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("whisperust=info,warn"));
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("ruistper=info,warn"));
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)

@@ -2486,7 +2486,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "whisperust"
+name = "ruistper"
 version = "0.1.0"
 dependencies = [
  "deadpool-lapin",

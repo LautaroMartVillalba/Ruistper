@@ -1,10 +1,10 @@
 [package]
-name    = "whisperust"
+name    = "ruistper"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "whisperust"
+name = "ruistper"
 path = "src/main.rs"
 
 # ── Async runtime ──────────────────────────────────────────────────────────────
