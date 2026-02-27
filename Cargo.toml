@@ -1,0 +1,87 @@
+[package]
+name    = "whisperust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "whisperust"
+path = "src/main.rs"
+
+# ── Async runtime ──────────────────────────────────────────────────────────────
+[dependencies.tokio]
+version  = "1"
+features = ["full"]         # rt-multi-thread, macros, sync, fs, signal, time
+
+# ── RabbitMQ ───────────────────────────────────────────────────────────────────
+[dependencies.lapin]
+version = "2.3"
+
+[dependencies.deadpool-lapin]
+version = "0.12"
+
+# Needed for StreamExt on the consumer delivery stream.
+[dependencies.futures-util]
+version = "0.3"
+
+# ── Serialisation ─────────────────────────────────────────────────────────────
+[dependencies.serde]
+version  = "1"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1"
+
+# ── Audio decoding (symphonia) ─────────────────────────────────────────────────
+# Supported formats: MP3, OGG/Vorbis, OGG/Opus, FLAC, WAV, AAC, M4A/MP4.
+# .wma is intentionally excluded (not supported by symphonia).
+[dependencies.symphonia]
+version  = "0.5"
+features = [
+    "mp3",      # MP3 decoder (minimp3)
+    "ogg",      # OGG demuxer — also handles Opus streams
+    "vorbis",   # Vorbis decoder
+    "flac",     # FLAC decoder
+    "wav",      # WAV demuxer + decoder
+    "aac",      # AAC decoder
+    "isomp4",   # MP4 / M4A demuxer
+]
+
+# ── Audio resampling ───────────────────────────────────────────────────────────
+[dependencies.rubato]
+version = "0.15"
+
+# ── OGG/Opus support (WhatsApp voice messages) ────────────────────────────────
+# Symphonia 0.5 has no native Opus decoder; we use libopus bindings directly.
+# ogg demuxes the OGG container; opus (libopus FFI) decodes the Opus bitstream.
+# libopus-dev must be present in the Docker builder; libopus0 in runtime.
+[dependencies.ogg]
+version = "0.8"
+
+[dependencies.opus]
+version = "0.3"
+
+# ── WAV writing (for optional intermediate files) ─────────────────────────────
+[dependencies.hound]
+version = "3"
+
+# ── Whisper inference (whisper.cpp bindings) ──────────────────────────────────
+# Requires the whisper.cpp native library to be compiled.
+# Set WHISPER_DONT_GENERATE_BINDINGS=1 if you supply pre-built bindings.
+[dependencies.whisper-rs]
+version = "0.13"
+
+# ── Structured logging ────────────────────────────────────────────────────────
+[dependencies.tracing]
+version = "0.1"
+
+[dependencies.tracing-subscriber]
+version  = "0.3"
+features = ["env-filter"]
+
+# ── Build profile ─────────────────────────────────────────────────────────────
+
+[profile.release]
+opt-level     = 3
+lto           = "thin"
+codegen-units = 1
+strip         = "symbols"

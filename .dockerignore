@@ -1,0 +1,6 @@
+# Excluye artefactos de compilación del contexto de build de Docker.
+# Sin esto, el directorio target/ (varios GB) se enviaría al daemon en cada build.
+target/
+.git/
+*.md
+models/

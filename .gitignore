@@ -1,0 +1,27 @@
+# Rust build artifacts
+/target/
+
+# Keep Cargo.lock for binary crates
+# Cargo.lock
+
+# IDE & editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Downloaded GGML models
+models/
+
+# Temporary audio files
+/tmp/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
