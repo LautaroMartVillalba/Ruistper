@@ -94,6 +94,7 @@ impl RabbitProducer {
         import_batch_id: Option<i64>,
         texto: String,
         duration: f64,
+        processing_time_ms: u64,
     ) -> Result<(), ProducerError> {
         let result = TranscriptionResult::success(
             attachment_id,
@@ -101,6 +102,7 @@ impl RabbitProducer {
             texto,
             duration,
             self.model_name.clone(),
+            processing_time_ms,
         );
         self.publish_result(&result).await
     }

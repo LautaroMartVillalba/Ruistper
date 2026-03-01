@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Instant;
 
 use lapin::{
     message::Delivery,
@@ -114,6 +115,7 @@ pub async fn process(
     // `audio::pipeline::process` (pydub equivalent) and `WhisperEngine::transcribe`
     // are synchronous and CPU-bound.  Spawning them on the blocking thread pool
     // keeps the async executor free for I/O (RabbitMQ, etc.).
+    let job_start = Instant::now();
     let blocking_result = tokio::task::spawn_blocking(move || {
         let path = Path::new(&path_str);
 
@@ -197,8 +199,9 @@ pub async fn process(
         // ── Success ────────────────────────────────────────────────────────────
         // Mirrors Go's PublishSuccess + Ack block (step 6 of processJob).
         Ok(Ok((duration, texto))) => {
+            let processing_ms = job_start.elapsed().as_millis() as u64;
             match producer
-                .publish_success(attachment_id, import_batch_id, texto, duration)
+                .publish_success(attachment_id, import_batch_id, texto, duration, processing_ms)
                 .await
             {
                 Ok(_) => {

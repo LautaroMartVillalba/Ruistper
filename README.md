@@ -93,16 +93,17 @@ src/model/request.rs
 
 src/model/result.rs
   struct TranscriptionResult {
-    attachment_id:   i64,
-    texto:           String,
-    duration:        f64,
-    model:           String,
-    success:         bool,
-    import_batch_id: Option<i64>,
-    error_message:   Option<String>,  // skip_serializing_if = None
+    attachment_id:      i64,
+    texto:              String,
+    duration:           f64,
+    model:              String,
+    success:            bool,
+    import_batch_id:    Option<i64>,
+    error_message:      Option<String>,  // skip_serializing_if = None
+    processing_time_ms: Option<u64>,     // skip_serializing_if = None; only on success
   }
-  TranscriptionResult::success(attachment_id, texto, duration, model, import_batch_id) → Self
-  TranscriptionResult::failure(attachment_id, model, import_batch_id, error_message)   → Self
+  TranscriptionResult::success(attachment_id, texto, duration, model, import_batch_id, processing_time_ms) → Self
+  TranscriptionResult::failure(attachment_id, model, import_batch_id, error_message)                       → Self
 
 src/audio/decoder.rs
   fn decode(path: &Path) → Result<DecodedAudio, DecodeError>
@@ -170,7 +171,7 @@ src/messaging/producer.rs
   #[derive(Clone)]
   struct RabbitProducer { pool: Pool, model_name: String }
   RabbitProducer::new(pool: &Pool, model_name: String) → Result<Self, ProducerError>
-  RabbitProducer::publish_success(result: TranscriptionResult) → Result<(), ProducerError>
+  RabbitProducer::publish_success(attachment_id, import_batch_id, texto, duration, processing_time_ms) → Result<(), ProducerError>
   RabbitProducer::publish_error(result: TranscriptionResult)   → Result<(), ProducerError>
   RabbitProducer::publish_retry(request: TranscriptionRequest) → Result<(), ProducerError>
   // publish_retry: increments retry_count; sets x-retry-count AMQP header
@@ -186,6 +187,8 @@ src/worker/task.rs
   // Any publish failure → NACK(requeue=true)
   // Blocking work dispatched via tokio::task::spawn_blocking:
   //   audio::pipeline::process → WhisperEngine::transcribe
+  // Timing: Instant::now() captured immediately before spawn_blocking;
+  //   elapsed().as_millis() read on success → stored as processing_time_ms in result
 
 src/worker/pool.rs
   struct WorkerPool { workers_count: usize, engine: WhisperEngine,
@@ -250,12 +253,13 @@ RETRY (Dead-Letter Exchange pattern)
 
 ```json
 {
-  "attachment_id":   123,
-  "texto":           "Hola, ¿cómo estás?",
-  "duration":        4.32,
-  "model":           "base-q5_1",
-  "success":         true,
-  "import_batch_id": 42
+  "attachment_id":      123,
+  "texto":              "Hola, ¿cómo estás?",
+  "duration":           4.32,
+  "model":              "base-q5_1",
+  "success":            true,
+  "import_batch_id":    42,
+  "processing_time_ms": 3241
 }
 ```
 
@@ -282,6 +286,7 @@ RETRY (Dead-Letter Exchange pattern)
 | `success` | `bool` | |
 | `import_batch_id` | `Option<i64>` | Echoed from request |
 | `error_message` | `Option<String>` | Serialized only when `success = false` (`skip_serializing_if`) |
+| `processing_time_ms` | `Option<u64>` | Wall-clock ms from `spawn_blocking` start to its completion (decode + resample + inference). Serialized only when `success = true`. Absent on failure. |
 
 ---
 
@@ -416,12 +421,13 @@ Published to:
 **Success:**
 ```json
 {
-  "attachment_id":   123,
-  "texto":           "Hola, ¿cómo estás?",
-  "duration":        4.32,
-  "model":           "base-q5_1",
-  "success":         true,
-  "import_batch_id": 42
+  "attachment_id":      123,
+  "texto":              "Hola, ¿cómo estás?",
+  "duration":           4.32,
+  "model":              "base-q5_1",
+  "success":            true,
+  "import_batch_id":    42,
+  "processing_time_ms": 3241
 }
 ```
 
@@ -447,6 +453,7 @@ Published to:
 | `success` | `bool` | Whether transcription succeeded |
 | `import_batch_id` | `i64 \| null` | Echoed from the request |
 | `error_message` | `String \| null` | Present only on failure |
+| `processing_time_ms` | `i64 \| null` | Wall-clock processing time in ms (decode + resample + inference). Present only on success. Useful to compute RTF: `processing_time_ms / (duration × 1000)` |
 
 ---
 

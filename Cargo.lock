@@ -1643,6 +1643,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruistper"
+version = "0.1.0"
+dependencies = [
+ "deadpool-lapin",
+ "futures-util",
+ "hound",
+ "lapin",
+ "ogg",
+ "opus",
+ "rubato",
+ "serde",
+ "serde_json",
+ "symphonia",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "whisper-rs",
+]
+
+[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2483,26 +2503,6 @@ dependencies = [
  "cfg-if",
  "cmake",
  "fs_extra",
-]
-
-[[package]]
-name = "ruistper"
-version = "0.1.0"
-dependencies = [
- "deadpool-lapin",
- "futures-util",
- "hound",
- "lapin",
- "ogg",
- "opus",
- "rubato",
- "serde",
- "serde_json",
- "symphonia",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "whisper-rs",
 ]
 
 [[package]]

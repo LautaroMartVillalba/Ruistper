@@ -34,6 +34,12 @@ pub struct TranscriptionResult {
     /// Human-readable error description. Only present when `success` is `false`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error_message: Option<String>,
+
+    /// Wall-clock time from job receipt to result publish, in milliseconds.
+    /// Only present on successful transcriptions.
+    /// Enables RTF calculation on the consumer side: RTF = processing_time_ms / (duration * 1000).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub processing_time_ms: Option<u64>,
 }
 
 impl TranscriptionResult {
@@ -44,6 +50,7 @@ impl TranscriptionResult {
         texto: String,
         duration: f64,
         model: String,
+        processing_time_ms: u64,
     ) -> Self {
         Self {
             attachment_id,
@@ -53,6 +60,7 @@ impl TranscriptionResult {
             success: true,
             import_batch_id,
             error_message: None,
+            processing_time_ms: Some(processing_time_ms),
         }
     }
 
@@ -71,6 +79,7 @@ impl TranscriptionResult {
             success: false,
             import_batch_id,
             error_message: Some(error_message),
+            processing_time_ms: None,
         }
     }
 }
