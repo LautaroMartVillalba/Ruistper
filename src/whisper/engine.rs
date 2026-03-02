@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use whisper_rs::{FullParams, SamplingStrategy};
+use whisper_rs::{FullParams, SamplingStrategy, WhisperState};
 
 use super::model::WhisperModel;
 
@@ -91,6 +91,50 @@ impl WhisperEngine {
             .context
             .create_state()
             .map_err(|e| EngineError::StateCreation(e.to_string()))?;
+
+        self.run_inference(&mut state, samples, language)
+    }
+
+    /// Allocate a `WhisperState` tied to this engine's context.
+    ///
+    /// Call this **once per worker thread** (outside the job loop) and pass the
+    /// returned state to [`transcribe_with_state`] on every job. This avoids the
+    /// ~230 MB buffer allocation that whisper.cpp performs on every
+    /// `create_state()` call, which was the primary source of per-job overhead.
+    ///
+    /// # Note on Send
+    /// `WhisperState` is **not `Send`**. It must be created and used on the same
+    /// thread — i.e. inside the same `spawn_blocking` closure. Do not attempt to
+    /// move it across threads.
+    pub fn create_state(&self) -> Result<WhisperState, EngineError> {
+        self.model
+            .context
+            .create_state()
+            .map_err(|e| EngineError::StateCreation(e.to_string()))
+    }
+
+    /// Transcribe using a pre-allocated `WhisperState`.
+    ///
+    /// Identical to [`transcribe`] but reuses the provided state instead of
+    /// allocating a new one. The state buffers are overwritten on each call —
+    /// no stale data leaks between jobs.
+    pub fn transcribe_with_state(
+        &self,
+        state: &mut WhisperState,
+        samples: &[f32],
+        language: Option<&str>,
+    ) -> Result<TranscriptionOutput, EngineError> {
+        self.run_inference(state, samples, language)
+    }
+
+    // ── Private ────────────────────────────────────────────────────────────────
+
+    fn run_inference(
+        &self,
+        state: &mut WhisperState,
+        samples: &[f32],
+        language: Option<&str>,
+    ) -> Result<TranscriptionOutput, EngineError> {
 
         // Mirror Python faster-whisper settings:
         //   beam_size=5 → BeamSearch { beam_size: 5 }

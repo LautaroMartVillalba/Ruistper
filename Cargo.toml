@@ -67,8 +67,13 @@ version = "3"
 # ── Whisper inference (whisper.cpp bindings) ──────────────────────────────────
 # Requires the whisper.cpp native library to be compiled.
 # Set WHISPER_DONT_GENERATE_BINDINGS=1 if you supply pre-built bindings.
+#
+# openblas: enables OpenBLAS-accelerated matrix ops in whisper.cpp.
+#   This is the primary reason GGML on CPU can match CTranslate2 (faster-whisper).
+#   Requires: libopenblas-dev at build time, libopenblas0 at runtime.
 [dependencies.whisper-rs]
-version = "0.13"
+version  = "0.13"
+features = ["openblas"]
 
 # ── Structured logging ────────────────────────────────────────────────────────
 [dependencies.tracing]

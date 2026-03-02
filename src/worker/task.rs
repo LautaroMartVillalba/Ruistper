@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
@@ -115,6 +116,17 @@ pub async fn process(
     // `audio::pipeline::process` (pydub equivalent) and `WhisperEngine::transcribe`
     // are synchronous and CPU-bound.  Spawning them on the blocking thread pool
     // keeps the async executor free for I/O (RabbitMQ, etc.).
+    //
+    // PERFORMANCE: `WhisperState` allocates ~230 MB of compute buffers on creation.
+    // We use `thread_local!` so each blocking-pool thread initialises its state
+    // exactly once and reuses it for every subsequent job — mirroring how
+    // faster-whisper keeps a persistent model/state object per worker process.
+    // `WhisperState` is not `Send`, so it must live in a thread-local.
+    thread_local! {
+        static WHISPER_STATE: RefCell<Option<whisper_rs::WhisperState>> =
+            const { RefCell::new(None) };
+    }
+
     let job_start = Instant::now();
     let blocking_result = tokio::task::spawn_blocking(move || {
         let path = Path::new(&path_str);
@@ -123,9 +135,20 @@ pub async fn process(
         let processed = pipeline::process(path, &limits).map_err(TaskError::from)?;
 
         // Step 2 — whisper.cpp inference (equivalent to Python's WhisperService)
-        let output = engine
-            .transcribe(&processed.samples, language.as_deref())
-            .map_err(TaskError::from)?;
+        //
+        // Initialise the thread-local state on first use for this thread.
+        // The engine Arc keeps the WhisperContext alive for the thread's lifetime.
+        let output = WHISPER_STATE.with(|cell: &RefCell<Option<whisper_rs::WhisperState>>| {
+            let mut opt = cell.borrow_mut();
+            if opt.is_none() {
+                let state = engine.create_state().map_err(TaskError::from)?;
+                *opt = Some(state);
+            }
+            let state = opt.as_mut().unwrap();
+            engine
+                .transcribe_with_state(state, &processed.samples, language.as_deref())
+                .map_err(TaskError::from)
+        })?;
 
         Ok::<_, TaskError>((processed.duration_secs, output.text))
     })

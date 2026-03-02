@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libclang-dev \
         pkg-config \
         libopus-dev \
+        libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -29,6 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libstdc++6 \
         libgomp1 \
         libopus0 \
+        libopenblas0 \
         ca-certificates \
         curl \
     && rm -rf /var/lib/apt/lists/*
